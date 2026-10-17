@@ -7,8 +7,20 @@
 // ---- 1. config ------------------------------------------------------------------------------------------------
 
 function base() { return "https://vseemax.com"; }
-function user() { return kino.secret("username"); }
-function pass() { return kino.secret("password"); }
+// The account is stored encrypted (AES-256-CBC); its key is a sealed secret that only Kino can open, so neither the repo
+// nor the manifest holds the user or the password. Decrypted once per run, in memory only.
+const CRED_IV = "7b6566449922fc9474fa3898f6df0801";
+const CRED_BLOB = "qxwO3vSxqZtUyQ1qFxNo2WQF/VPZkrDh9wbVrKCiGSE=";
+let account = null;
+function creds() {
+  if (!account) {
+    const [u, p] = kino.crypto.decrypt("aes-256-cbc", { key: kino.secret("ck"), iv: CRED_IV, ivEncoding: "hex", data: CRED_BLOB }).split("\n");
+    account = { u, p };
+  }
+  return account;
+}
+function user() { return creds().u; }
+function pass() { return creds().p; }
 function api() { return base() + "/player_api.php"; }
 
 const PAGE_SIZE = 24;

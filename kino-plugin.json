@@ -1,7 +1,7 @@
 {
   "id": "mubis-hd",
   "name": "Mubis HD",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "apiVersion": 9,
   "entry": "plugin.js",
   "description": "Películas y series en HD: catálogo por categorías, búsqueda, fichas con sinopsis y episodios.",
@@ -32,8 +32,11 @@
   },
   "debug": true,
   "secrets": {
-    "username": "kino-sealed:v1:XJdoym1Q3vMMre0CiBYb5d-ZUT9OlLFVhI4HK5CqdG6dyH_zo2Fx-d9u2U6VlKeAg7fY8vutfvgZO_pGPIvsIQ5eh9RKxJIl",
-    "password": "kino-sealed:v1:K6jZDngaXp9BNUQNauoa1h-hdLzaYigF0Sn4ruQnP1YJpyesLjyUVobvuqIDq8gMLEloNKopjiRsq5HgKAw_7Lr3-_soPJI"
+    "ck": {
+      "seal": "kino-sealed:v1:ISM29KDGcMxqQUqafRtoBBOTv0PMGjmzdii4IJ_SvzIVwY7iPIUA2PDXFT-asJnAikv7FpM5_ZaVLtJhX5BVNeRGEz83zkxr4DM-dNfKBCcWTx4roFGIJskta8foj5e1zR7Q0GAY83tPFE56byzXIgWRFN-YbiadzKbc9w",
+      "use": "cipher-key",
+      "encoding": "hex"
+    }
   },
   "streamHosts": "any",
   "settings": [
