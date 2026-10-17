@@ -264,21 +264,29 @@ function seriesMeta(info) {
   });
 }
 
-// Xtream's series answer has no TMDB id, and Kino needs it to offer online subtitles and to link the title: ask TMDB
-// (through Kino, no key in the plugin) once per series and remember it.
+// TMDB through Kino (kino.tmdb brings Kino's own key; the plugin holds none). Used to find a series' TMDB id (Xtream's series
+// answer has none, and Kino needs it to offer online subtitles) and to read Spanish synopses.
+async function tmdbGet(path, params) {
+  if (typeof kino.tmdb !== "function") throw new Error("kino.tmdb not available");
+  return kino.tmdb(path, params || {});
+}
+
 async function seriesTmdb(id, title, year) {
   const key = "mh:tmdb-s" + id;
   try { const raw = kino.storage.get(key); if (raw) return parseInt(raw, 10) || undefined; } catch (_) {}
   const name = String(title || "").replace(/\s*\((19|20)\d{2}\)\s*$/, "").trim();
-  if (!name || typeof kino.tmdb !== "function") return undefined;
+  if (!name) return undefined;
   try {
     const params = { query: name };
     if (year) params.first_air_date_year = year;
-    const res = await kino.tmdb("/search/tv", params);
-    const hit = arr(res && res.results)[0];
+    const hit = arr((await tmdbGet("/search/tv", params)).results)[0];
     if (hit && hit.id) { try { kino.storage.set(key, String(hit.id), { ttlMs: 30 * 24 * 60 * 60 * 1000 }); } catch (_) {} return hit.id; }
   } catch (e) { kino.log("tmdb series " + id + ": " + (e && e.message)); }
   return undefined;
+}
+
+async function spanishOverview(kind, tmdb) {
+  try { return text((await tmdbGet("/" + kind + "/" + tmdb, { language: "es-MX" })).overview, 1500) || undefined; } catch (_) { return undefined; }
 }
 
 export async function episodes(ref) {
@@ -310,6 +318,7 @@ export async function episodes(ref) {
   eps.sort((a, b) => (a.season - b.season) || (a.number - b.number));
   const series = seriesMeta((data && data.info) || {});
   if (!series.ids) { const tmdb = await seriesTmdb(m[1], series.title, series.year); if (tmdb) series.ids = { tmdb }; }
+  if (series.ids) { const es = await spanishOverview("tv", series.ids.tmdb); if (es) series.overview = es; }
   return { series, episodes: eps };
 }
 
@@ -319,7 +328,8 @@ export async function details(ref) {
     const data = await vodInfo(movie[1]);
     const info = (data && data.info) || {};
     const q = qualityLine(info);
-    const plot = text(info.plot || info.description, 1400);
+    const tmdbId = tmdbOf(info.tmdb_id);
+    const plot = (tmdbId && await spanishOverview("movie", tmdbId)) || text(info.plot || info.description, 1400);
     const cast = text(info.actors || info.cast, 200);
     const extra = [info.director ? "Dir: " + text(info.director, 80) : "", cast ? "Cast: " + cast : "", q].filter(Boolean).join("\n");
     const tmdb = tmdbOf(info.tmdb_id);
@@ -340,6 +350,7 @@ export async function details(ref) {
   if (ser) {
     const series = seriesMeta(((await seriesInfo(ser[1])) || {}).info || {});
     if (!series.ids) { const tmdb = await seriesTmdb(ser[1], series.title, series.year); if (tmdb) series.ids = { tmdb }; }
+    if (series.ids) { const es = await spanishOverview("tv", series.ids.tmdb); if (es) series.overview = es; }
     return series;
   }
   return null;
