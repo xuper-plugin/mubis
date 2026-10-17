@@ -1,10 +1,10 @@
 {
   "id": "mubis-hd",
   "name": "Mubis HD",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "apiVersion": 9,
   "entry": "plugin.js",
-  "description": "Películas y series en HD: catálogo por categorías, búsqueda, fichas con sinopsis y episodios.",
+  "description": "Películas, series y TV en vivo en HD: catálogo, búsqueda, fichas, episodios y guía de canales.",
   "author": "kinotvapp",
   "hosts": [
     "vseemax.com"
@@ -16,11 +16,13 @@
     "episodes",
     "resolve",
     "scopedSearch",
-    "download"
+    "download",
+    "channels"
   ],
   "categories": [
     "movies",
-    "series"
+    "series",
+    "live"
   ],
   "color": "#F5A623",
   "theme": {
@@ -68,5 +70,6 @@
   ],
   "section": {
     "label": "Mubis HD"
-  }
+  },
+  "liveStreamHosts": "any"
 }

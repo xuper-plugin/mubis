@@ -333,10 +333,93 @@ export async function resolve(ref) {
   const ep = /^e:(\d+):([a-zA-Z0-9]+)$/.exec(String(ref || ""));
   if (ep) return { url: base() + "/series/" + encodeURIComponent(user()) + "/" + encodeURIComponent(pass()) + "/" + ep[1] + "." + ep[2] };
 
+  const live = /^l:(\d+)$/.exec(String(ref || ""));
+  if (live) return { url: base() + "/live/" + encodeURIComponent(user()) + "/" + encodeURIComponent(pass()) + "/" + live[1] + ".m3u8", mime: "application/x-mpegURL" };
+
   throw kino.error("not_found", "unknown ref");
 }
 
-// ---- 11. settings ----------------------------------------------------------------------------------------------
+// ---- 11. live TV -----------------------------------------------------------------------------------------------
+
+const LIVE_PAGE = 50;
+const GUIDE_MAX_CHANNELS = 40;
+
+function liveGenre(name) {
+  const n = String(name).toLowerCase();
+  if (/sport|ufc|wwe|fight/.test(n)) return "deportes";
+  if (/kid|toddler|cartoon/.test(n)) return "infantil";
+  if (/movie|netflix|syfy|action|classic/.test(n)) return "peliculas";
+  if (/music/.test(n)) return "musica";
+  if (/document/.test(n)) return "documentales";
+  if (/anime/.test(n)) return "anime";
+  if (/news/.test(n)) return "noticias";
+  return "entretenimiento";
+}
+
+const liveCats = () => cached("live-cats", CACHE_CATS_MS, () => getJson(apiUrl({ action: "get_live_categories" })));
+
+function liveToChannel(s) {
+  const number = parseInt(s.num, 10);
+  return clean({
+    id: "live-" + s.stream_id,
+    title: text(s.name, 120),
+    ref: "l:" + s.stream_id,
+    categoryId: s.category_id ? String(s.category_id) : undefined,
+    logo: s.stream_icon || undefined,
+    number: number >= 1 && number <= 9999 ? number : undefined,
+  });
+}
+
+export async function liveCategories() {
+  return safeCats(await liveCats()).map((c) => ({ id: String(c.category_id), title: text(c.category_name, 60), genre: liveGenre(c.category_name) }));
+}
+
+export async function liveChannels({ categoryId, cursor }) {
+  const offset = cursor ? parseInt(cursor, 10) : 0;
+  const list = arr(await getJson(apiUrl({ action: "get_live_streams", category_id: categoryId }), 25000));
+  const items = list.slice(offset, offset + LIVE_PAGE).map(liveToChannel);
+  return { items, next: offset + LIVE_PAGE < list.length ? String(offset + LIVE_PAGE) : null };
+}
+
+export async function liveSearch({ query }) {
+  const q = String(query || "").toLowerCase().trim();
+  if (q.length < 2) return [];
+  const [cats, all] = await Promise.all([liveCats().catch(() => []), getJson(apiUrl({ action: "get_live_streams" }), 25000)]);
+  const allowed = new Set(safeCats(cats).map((c) => String(c.category_id)));
+  return arr(all).filter((s) => allowed.has(String(s.category_id)) && String(s.name || "").toLowerCase().includes(q)).slice(0, 50).map(liveToChannel);
+}
+
+function b64text(s) {
+  try {
+    const bin = atob(String(s || ""));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new TextDecoder("utf-8").decode(bytes);
+  } catch (_) { return String(s || ""); }
+}
+
+export async function guide({ channelIds, from, to }) {
+  const ids = arr(channelIds).map((c) => /^live-(\d+)$/.exec(String(c))).filter(Boolean).slice(0, GUIDE_MAX_CHANNELS);
+  const out = [];
+  let next = 0;
+  async function worker() {
+    while (next < ids.length) {
+      const m = ids[next++];
+      try {
+        const data = await getJson(apiUrl({ action: "get_short_epg", stream_id: m[1], limit: 12 }));
+        for (const e of arr(data && data.epg_listings)) {
+          const start = parseInt(e.start_timestamp, 10) * 1000, end = parseInt(e.stop_timestamp, 10) * 1000;
+          if (!(start > 0 && end > start) || end < from || start > to) continue;
+          out.push(clean({ channelId: "live-" + m[1], title: text(b64text(e.title), 200) || "-", start, end, description: text(b64text(e.description), 600) || undefined }));
+        }
+      } catch (e) { kino.log("guide " + m[1] + ": " + (e && e.message)); }
+    }
+  }
+  await Promise.all([worker(), worker(), worker(), worker()]);
+  return out;
+}
+
+// ---- 12. settings ----------------------------------------------------------------------------------------------
 
 async function accountLine() {
   const data = await getJson(apiUrl({}));
