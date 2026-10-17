@@ -139,30 +139,43 @@ function seriesToItem(s) {
 
 // ---- 5. home / section -----------------------------------------------------------------------------------------
 
+const SPORTS = /ufc|wwe|sport|fight|boxing|wrestl/i;
+
+async function rowFor(isVod, cat, genre) {
+  try {
+    const list = arr(await (isVod ? vodStreams(cat.category_id) : seriesList(cat.category_id)));
+    const items = list.slice(0, HOME_ROW_ITEMS).map(isVod ? vodToItem : seriesToItem);
+    if (!items.length) return null;
+    return { id: (isVod ? "vod-" : "ser-") + cat.category_id, title: text(cat.category_name, 60), items, ref: "cat:" + (isVod ? "vod:" : "series:") + cat.category_id, genre: genre || (isVod ? "peliculas" : "series") };
+  } catch (e) { kino.log("row " + cat.category_id + ": " + (e && e.message)); return null; }
+}
+
 async function rowsFor(kind) {
   const isVod = kind === "vod";
   const cats = safeCats(await (isVod ? vodCategories() : seriesCategories()).catch((e) => { kino.log(kind + " cats: " + (e && e.message)); return []; }))
+    .filter((c) => !SPORTS.test(String(c.category_name || "")))
     .slice(0, isVod ? HOME_VOD_CATS : HOME_SER_CATS);
-  const rows = await Promise.all(cats.map(async (cat) => {
-    try {
-      const list = arr(await (isVod ? vodStreams(cat.category_id) : seriesList(cat.category_id)));
-      const items = list.slice(0, HOME_ROW_ITEMS).map(isVod ? vodToItem : seriesToItem);
-      if (!items.length) return null;
-      return { id: (isVod ? "vod-" : "ser-") + cat.category_id, title: text(cat.category_name, 60), items, ref: "cat:" + (isVod ? "vod:" : "series:") + cat.category_id, genre: isVod ? "peliculas" : "series" };
-    } catch (e) { kino.log("home " + kind + " " + cat.category_id + ": " + (e && e.message)); return null; }
-  }));
-  return rows.filter(Boolean);
+  return (await Promise.all(cats.map((c) => rowFor(isVod, c)))).filter(Boolean);
+}
+
+// The server has almost no live sports, but it keeps UFC, WWE and sports replays as on-demand categories: show them first.
+async function sportsRows(kind) {
+  const isVod = kind === "vod";
+  const cats = safeCats(await (isVod ? vodCategories() : seriesCategories()).catch(() => [])).filter((c) => SPORTS.test(String(c.category_name || ""))).slice(0, 4);
+  return (await Promise.all(cats.map((c) => rowFor(isVod, c, "deportes")))).filter(Boolean);
 }
 
 export async function home() {
-  const [v, s] = await Promise.all([rowsFor("vod"), rowsFor("series")]);
-  return v.concat(s);
+  const [sv, ss, v, s] = await Promise.all([sportsRows("vod"), sportsRows("series"), rowsFor("vod"), rowsFor("series")]);
+  return sv.concat(ss, v, s);
 }
 
 export async function section({ tab }) {
   const tabs = [{ id: "movies", label: t("movies") }, { id: "series", label: t("series") }];
   const chosen = tab === "series" ? "series" : "movies";
-  const rows = await rowsFor(chosen === "series" ? "series" : "vod");
+  const kind = chosen === "series" ? "series" : "vod";
+  const [sports, regular] = await Promise.all([sportsRows(kind), rowsFor(kind)]);
+  const rows = sports.concat(regular);
   const answer = { tabs, tab: chosen, rows };
   const pool = rows.length ? rows[0].items : [];
   if (pool.length) {
