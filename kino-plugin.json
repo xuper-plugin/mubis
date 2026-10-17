@@ -1,0 +1,47 @@
+{
+  "id": "mubis-hd",
+  "name": "Mubis HD",
+  "version": "0.1.0",
+  "apiVersion": 9,
+  "entry": "plugin.js",
+  "description": "Películas y series en HD vía Xtream Codes (Xtream API).",
+  "author": "kinotvapp",
+  "hosts": [],
+  "capabilities": [
+    "home",
+    "browse",
+    "search",
+    "episodes",
+    "resolve"
+  ],
+  "categories": [
+    "movies",
+    "series"
+  ],
+  "color": "#E53935",
+  "theme": {
+    "accent": "#E53935",
+    "onAccent": "#FFFFFF",
+    "background": "#0A0A0A",
+    "surface": "#1A1A1A",
+    "highlight": "#FF8A80"
+  },
+  "debug": true,
+  "secrets": {
+    "server": "kino-sealed:v1:9zef_nIkb7QHWhe6yF0XNvFd1asL6cTab2ZKt39YpyI192CsJ2JJ5ymVv2AtsbBhzNs0wK_eRBOTxI4mJqM8c-DeI3-bcTrz_htzU1ylkLh5ToT_z9V72A",
+    "username": "kino-sealed:v1:JxO7z9rgK7rWABWxqlJ3qT4vV8nEzObHEMV_-2EvRB3-hWkf_w_kHlBbgR_ooX1NWj94u2dojsHzhsL56JeERcf6QnmNO74w",
+    "password": "kino-sealed:v1:V1faEgY0qHSXRE9iUITJeSS5bNkZhKyMl7qSMzL7oVzydOFhDN_sz8TT18HKIuOUI47iXUZL0Y4zZDF3cqGKSKmhaJmq978"
+  },
+  "fetchHosts": "any",
+  "streamHosts": "any",
+  "settings": [
+    {
+      "key": "server_override",
+      "type": "url",
+      "label": "Servidor personalizado (opcional)",
+      "labelEn": "Custom server (optional)",
+      "hint": "Déjalo vacío para usar el servidor por defecto",
+      "hintEn": "Leave empty to use the default server"
+    }
+  ]
+}
