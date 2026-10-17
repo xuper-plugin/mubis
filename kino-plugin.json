@@ -1,7 +1,7 @@
 {
   "id": "mubis-hd",
   "name": "Mubis HD",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "apiVersion": 9,
   "entry": "plugin.js",
   "description": "Películas, series y TV en vivo en HD: catálogo, búsqueda, fichas, episodios y guía de canales.",

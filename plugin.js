@@ -264,6 +264,23 @@ function seriesMeta(info) {
   });
 }
 
+// Xtream's series answer has no TMDB id, and Kino needs it to offer online subtitles and to link the title: ask TMDB
+// (through Kino, no key in the plugin) once per series and remember it.
+async function seriesTmdb(id, title, year) {
+  const key = "mh:tmdb-s" + id;
+  try { const raw = kino.storage.get(key); if (raw) return parseInt(raw, 10) || undefined; } catch (_) {}
+  const name = String(title || "").replace(/\s*\((19|20)\d{2}\)\s*$/, "").trim();
+  if (!name || typeof kino.tmdb !== "function") return undefined;
+  try {
+    const params = { query: name };
+    if (year) params.first_air_date_year = year;
+    const res = await kino.tmdb("/search/tv", params);
+    const hit = arr(res && res.results)[0];
+    if (hit && hit.id) { try { kino.storage.set(key, String(hit.id), { ttlMs: 30 * 24 * 60 * 60 * 1000 }); } catch (_) {} return hit.id; }
+  } catch (e) { kino.log("tmdb series " + id + ": " + (e && e.message)); }
+  return undefined;
+}
+
 export async function episodes(ref) {
   const m = /^s:(.+)$/.exec(String(ref || ""));
   if (!m) return { episodes: [] };
@@ -291,7 +308,9 @@ export async function episodes(ref) {
     }
   }
   eps.sort((a, b) => (a.season - b.season) || (a.number - b.number));
-  return { series: seriesMeta((data && data.info) || {}), episodes: eps };
+  const series = seriesMeta((data && data.info) || {});
+  if (!series.ids) { const tmdb = await seriesTmdb(m[1], series.title, series.year); if (tmdb) series.ids = { tmdb }; }
+  return { series, episodes: eps };
 }
 
 export async function details(ref) {
@@ -318,7 +337,11 @@ export async function details(ref) {
     });
   }
   const ser = /^s:(.+)$/.exec(String(ref || ""));
-  if (ser) return seriesMeta(((await seriesInfo(ser[1])) || {}).info || {});
+  if (ser) {
+    const series = seriesMeta(((await seriesInfo(ser[1])) || {}).info || {});
+    if (!series.ids) { const tmdb = await seriesTmdb(ser[1], series.title, series.year); if (tmdb) series.ids = { tmdb }; }
+    return series;
+  }
   return null;
 }
 
