@@ -1,7 +1,7 @@
 {
   "id": "mubis-hd",
   "name": "Mubis HD",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "apiVersion": 9,
   "entry": "plugin.js",
   "description": "Películas, series y TV en vivo en HD: catálogo, búsqueda, fichas, episodios y guía de canales.",
@@ -71,5 +71,6 @@
   "section": {
     "label": "Mubis HD"
   },
-  "liveStreamHosts": "any"
+  "liveStreamHosts": "any",
+  "icon": "icon.png"
 }
